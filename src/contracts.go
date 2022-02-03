@@ -12,7 +12,7 @@ const (
 )
 
 type ContractResult struct {
-	Url     string
+	Name    string
 	Pass    bool
 	Reason  FailureReason
 	Comment string
@@ -30,7 +30,7 @@ func combineHeaders(contract serialization.Contract, suite serialization.Suite) 
 }
 
 func RunContract(contract serialization.Contract, suite serialization.Suite) ContractResult {
-	cr := ContractResult{Url: contract.Url, Pass: false}
+	cr := ContractResult{Name: contract.Url, Pass: false}
 
 	res, err := RunRequest(suite.Contracts[0].Url, combineHeaders(contract, suite))
 	if err != nil {
@@ -38,7 +38,7 @@ func RunContract(contract serialization.Contract, suite serialization.Suite) Con
 		return cr
 	}
 
-	if res.StatusCode != 200 {
+	if res.StatusCode != 200 && (contract.Expect.Status == 0 || contract.Expect.Status != res.StatusCode) {
 		cr.Reason = FailureHttpStatus
 		return cr
 	}

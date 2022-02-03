@@ -6,10 +6,15 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type Expect struct {
+	Status int `yaml:"status"`
+}
+
 type Contract struct {
 	Url     string            `yaml:"url"`
 	Method  string            `yaml:"method"`
 	Headers map[string]string `yaml:"headers"`
+	Expect  Expect            `yaml:"expect"`
 }
 
 type Suite struct {

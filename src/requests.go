@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"io/ioutil"
 	"net/http"
 )
@@ -26,7 +27,9 @@ func RunRequest(url string, headers map[string]string) (*RequestResult, error) {
 		return nil, err
 	}
 	if rres.Body != nil {
-		defer rres.Body.Close()
+		defer func(Body io.ReadCloser) {
+			_ = Body.Close()
+		}(rres.Body)
 	}
 
 	res := RequestResult{StatusCode: rres.StatusCode}

@@ -30,7 +30,7 @@ func main() {
 		if !res.Pass {
 			postfix = aurora.Faint(fmt.Sprintf(" (%s)", res.Reason))
 		}
-		fmt.Printf("[%s] %s%s\n", prefix, res.Url, postfix)
+		fmt.Printf("[%s] %s%s\n", prefix, res.Name, postfix)
 	}
 
 	verdict := aurora.Bold(aurora.Red("FAIL"))
