@@ -32,7 +32,7 @@ func combineHeaders(contract serialization.Contract, suite serialization.Suite) 
 func RunContract(contract serialization.Contract, suite serialization.Suite) ContractResult {
 	cr := ContractResult{Name: contract.Url, Pass: false}
 
-	res, err := RunRequest(suite.Contracts[0].Url, combineHeaders(contract, suite))
+	res, err := RunRequest(contract.Url, combineHeaders(contract, suite))
 	if err != nil {
 		cr.Reason = FailureHttp
 		return cr
