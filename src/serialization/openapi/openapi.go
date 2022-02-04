@@ -50,6 +50,14 @@ func resolvePropertyRefs(schema *Schema, doc Document) (*Schema, error) {
 
 		schema.Properties[name] = *resolved
 	}
+	if schema.Items != nil {
+		resolved, err := resolvePropertyRefs(schema.Items, doc)
+		if err != nil {
+			return nil, err
+		}
+
+		schema.Items = resolved
+	}
 	return schema, nil
 }
 
