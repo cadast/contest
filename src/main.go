@@ -2,11 +2,19 @@ package main
 
 import (
 	"contract-testing/src/serialization"
+	"contract-testing/src/serialization/openapi"
 	"fmt"
 	"github.com/logrusorgru/aurora/v3"
 	"log"
 	"os"
 )
+
+func PassFail(b bool) aurora.Value {
+	if b {
+		return aurora.Green("PASS")
+	}
+	return aurora.Red("FAIL")
+}
 
 func main() {
 	suite, err := serialization.LoadSuite("./../contract.yaml")
