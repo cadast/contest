@@ -21,16 +21,19 @@ func main() {
 	if err != nil {
 		log.Fatalln("Could not load Suite YAML", err)
 	}
-	log.Println(suite.Contracts)
 
-	fmt.Printf("Testing %d contracts.\n", len(suite.Contracts))
+	doc, err := openapi.LoadDocument("./../products.yaml")
+	if err != nil {
+		log.Fatalln("Could not load OpenAPI Schema YAML", err)
+	}
+	suite.Schemas = doc.Components.Schemas
+
+	fmt.Printf("Testing %d contracts...\n\n", len(suite.Contracts))
 	successfulContracts := 0
 	for _, contract := range suite.Contracts {
 		res := RunContract(contract, *suite)
 
-		prefix := aurora.Red("FAIL")
 		if res.Pass {
-			prefix = aurora.Green("PASS")
 			successfulContracts++
 		}
 
@@ -38,16 +41,12 @@ func main() {
 		if !res.Pass {
 			postfix = aurora.Faint(fmt.Sprintf(" (%s)", res.Reason))
 		}
-		fmt.Printf("[%s] %s%s\n", prefix, res.Name, postfix)
+		fmt.Printf("[%s] %s%s\n", PassFail(res.Pass), res.Name, postfix)
 	}
 
-	verdict := aurora.Bold(aurora.Red("FAIL"))
-	if successfulContracts == len(suite.Contracts) {
-		verdict = aurora.Bold(aurora.Green("PASS"))
-	}
 	fmt.Println()
 	fmt.Printf("%d/%d contracts passed.\n", successfulContracts, len(suite.Contracts))
-	fmt.Printf("Final verdict: %s\n", verdict)
+	fmt.Printf("Final verdict: %s\n", aurora.Bold(PassFail(successfulContracts == len(suite.Contracts))))
 
 	if successfulContracts < len(suite.Contracts) {
 		os.Exit(1)

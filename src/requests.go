@@ -8,7 +8,7 @@ import (
 
 type RequestResult struct {
 	StatusCode int
-	Body       string
+	Body       []byte
 }
 
 func RunRequest(url string, headers map[string]string) (*RequestResult, error) {
@@ -38,7 +38,7 @@ func RunRequest(url string, headers map[string]string) (*RequestResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	res.Body = string(body)
+	res.Body = body
 
 	return &res, nil
 }

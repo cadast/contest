@@ -1,13 +1,15 @@
 package serialization
 
 import (
+	"contract-testing/src/serialization/openapi"
 	"io/ioutil"
 
 	"gopkg.in/yaml.v2"
 )
 
 type Expect struct {
-	Status int `yaml:"status"`
+	Status int    `yaml:"status"`
+	Schema string `yaml:"schema"`
 }
 
 type Contract struct {
@@ -20,6 +22,7 @@ type Contract struct {
 type Suite struct {
 	Contracts []Contract        `yaml:"contracts"`
 	Headers   map[string]string `yaml:"headers"`
+	Schemas   map[string]openapi.Schema
 }
 
 type wrapper struct {
