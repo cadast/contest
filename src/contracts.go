@@ -10,12 +10,13 @@ import (
 type FailureReason string
 
 const (
-	FailureContract   FailureReason = "contract"    // An invalid contract
-	FailureHttp       FailureReason = "http"        // An error while running the HTTP request
-	FailureIO         FailureReason = "io"          // An error while fetching the data
-	FailureHttpStatus FailureReason = "http.status" // An unexpected HTTP status code
-	FailureFormat     FailureReason = "format"      // An invalid response format
-	FailureSchema     FailureReason = "schema"      // An invalid response Schema
+	FailureContract    FailureReason = "contract"                // An invalid contract
+	FailureHttp        FailureReason = "http"                    // An error while running the HTTP request
+	FailureIO          FailureReason = "io"                      // An error while fetching the data
+	FailureHttpStatus  FailureReason = "unexpected.status"       // An unexpected HTTP status code
+	FailureFormat      FailureReason = "format"                  // An invalid response format
+	FailureSchema      FailureReason = "unexpected.schema"       // An invalid response Schema
+	FailureContentType FailureReason = "unexpected.content-type" // An unexpected content type
 )
 
 type ContractResult struct {
@@ -80,6 +81,12 @@ func runHttpContract(contract serialization.Contract, suite serialization.Suite)
 
 	if res.StatusCode != 200 && (contract.Expect.Status == 0 || contract.Expect.Status != res.StatusCode) {
 		cr.Reason = FailureHttpStatus
+		return cr
+	}
+
+	if contract.Expect.ContentType != "" && !strings.HasPrefix(res.ContentType, contract.Expect.ContentType+";") {
+		cr.Reason = FailureContentType
+		cr.Comment = "got \"" + res.ContentType + "\" not \"" + contract.Expect.ContentType + "\""
 		return cr
 	}
 

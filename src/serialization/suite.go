@@ -8,8 +8,9 @@ import (
 )
 
 type Expect struct {
-	Status int    `yaml:"status"`
-	Schema string `yaml:"schema"`
+	Status      int    `yaml:"status"`
+	Schema      string `yaml:"schema"`
+	ContentType string `yaml:"contentType"`
 }
 
 type Contract struct {

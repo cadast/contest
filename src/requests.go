@@ -7,8 +7,9 @@ import (
 )
 
 type RequestResult struct {
-	StatusCode int
-	Body       []byte
+	StatusCode  int
+	Body        []byte
+	ContentType string
 }
 
 func RunRequest(url string, headers map[string]string) (*RequestResult, error) {
@@ -39,6 +40,7 @@ func RunRequest(url string, headers map[string]string) (*RequestResult, error) {
 		return nil, err
 	}
 	res.Body = body
+	res.ContentType = rres.Header.Get("Content-Type")
 
 	return &res, nil
 }
