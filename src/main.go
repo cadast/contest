@@ -71,6 +71,27 @@ func main() {
 		}
 	}
 
+	for _, specFile := range suite.SpecFiles {
+		doc, err := openapi.LoadDocument(specFile.Path)
+		if err != nil {
+			log.Fatalln("Could not load OpenAPI Schema YAML", err)
+		}
+		for url, path := range doc.Paths {
+			contract, err := serialization.NewContractFromGet200Operation(specFile.BaseUrl+url, path)
+			if err != nil {
+				log.Fatalln("Could not create contract for path ", url, err)
+			}
+
+			// Check if the operation is included in the spec files operations
+			for operationId := range specFile.Operations {
+				if operationId == contract.Name {
+					suite.Contracts = append(suite.Contracts, *contract)
+					break
+				}
+			}
+		}
+	}
+
 	fmt.Printf("Testing %d contracts...\n\n", len(suite.Contracts))
 	successfulContracts := 0
 	for _, contract := range suite.Contracts {

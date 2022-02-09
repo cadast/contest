@@ -56,7 +56,7 @@ func runFileContract(contract serialization.Contract, suite serialization.Suite)
 		return cr
 	}
 
-	if contract.Expect.Schema != "" {
+	if contract.Expect.SchemaName != "" || contract.Expect.SchemaResolved != nil {
 		cr.Reason, cr.Comment = checkSchemaOnJson(content, contract, suite)
 		if cr.Reason != "" {
 			return cr
@@ -90,7 +90,7 @@ func runHttpContract(contract serialization.Contract, suite serialization.Suite)
 		return cr
 	}
 
-	if contract.Expect.Schema != "" {
+	if contract.Expect.SchemaName != "" || contract.Expect.SchemaResolved != nil {
 		cr.Reason, cr.Comment = checkSchemaOnJson(res.Body, contract, suite)
 		if cr.Reason != "" {
 			return cr
@@ -117,11 +117,15 @@ func createArraySchema(schemaName string, suite serialization.Suite) (openapi.Sc
 }
 
 func checkSchemaOnJson(data []byte, contract serialization.Contract, suite serialization.Suite) (FailureReason, string) {
-	schema, found := suite.Schemas[contract.Expect.Schema]
+	schema, found := suite.Schemas[contract.Expect.SchemaName]
+	if contract.Expect.SchemaResolved != nil {
+		schema = *contract.Expect.SchemaResolved
+		found = true
+	}
 
 	// Create a new array schema; possible future optimization is creating array schemas when loading the suite.
-	if strings.HasSuffix(contract.Expect.Schema, "[]") {
-		schema, found = createArraySchema(contract.Expect.Schema, suite)
+	if strings.HasSuffix(contract.Expect.SchemaName, "[]") {
+		schema, found = createArraySchema(contract.Expect.SchemaName, suite)
 	}
 
 	// Check if the schema specified in the contract was found
@@ -133,6 +137,10 @@ func checkSchemaOnJson(data []byte, contract serialization.Contract, suite seria
 	// Check if data was valid JSON
 	if err != nil {
 		return FailureFormat, ""
+	}
+
+	if schema.Title == "" {
+		schema.Title = "root"
 	}
 
 	// Check for valid JSON schema

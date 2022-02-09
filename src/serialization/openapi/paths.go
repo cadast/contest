@@ -8,8 +8,18 @@ type Path struct {
 }
 
 type Operation struct {
-	Summary     string   `yaml:"summary"`
-	OperationId string   `yaml:"operationId"`
-	Description string   `yaml:"description"`
-	Tags        []string `yaml:"tags"`
+	Summary     string              `yaml:"summary"`
+	OperationId string              `yaml:"operationId"`
+	Description string              `yaml:"description"`
+	Tags        []string            `yaml:"tags"`
+	Responses   map[string]Response `yaml:"responses"`
+}
+
+type Response struct {
+	Description string               `yaml:"description"`
+	Content     map[string]MediaType `yaml:"content"`
+}
+
+type MediaType struct {
+	Schema *Schema `yaml:"schema"`
 }

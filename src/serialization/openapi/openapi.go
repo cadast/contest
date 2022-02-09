@@ -24,16 +24,33 @@ func LoadDocument(path string) (*Document, error) {
 		return nil, err
 	}
 
+	return &document, document.ResolveRefs()
+}
+
+func (document Document) ResolveRefs() error {
 	for name, schema := range document.Components.Schemas {
 		resolved, err := resolvePropertyRefs(&schema, document)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		document.Components.Schemas[name] = *resolved
 	}
 
-	return &document, nil
+	for _, path := range document.Paths {
+		for _, op := range path.Operations {
+			for _, response := range op.Responses {
+				for _, content := range response.Content {
+					resolved, err := resolvePropertyRefs(content.Schema, document)
+					if err != nil {
+						return err
+					}
+					content.Schema = resolved
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func resolvePropertyRefs(schema *Schema, doc Document) (*Schema, error) {
