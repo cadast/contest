@@ -3,17 +3,19 @@ package main
 import (
 	"contract-testing/src/serialization"
 	"contract-testing/src/serialization/openapi"
+	"io/ioutil"
 	"strings"
 )
 
 type FailureReason string
 
 const (
-	FailureContract   FailureReason = "contract"
-	FailureHttp       FailureReason = "http"
-	FailureHttpStatus FailureReason = "http.status"
-	FailureFormat     FailureReason = "format"
-	FailureSchema     FailureReason = "schema"
+	FailureContract   FailureReason = "contract"    // An invalid contract
+	FailureHttp       FailureReason = "http"        // An error while running the HTTP request
+	FailureIO         FailureReason = "io"          // An error while fetching the data
+	FailureHttpStatus FailureReason = "http.status" // An unexpected HTTP status code
+	FailureFormat     FailureReason = "format"      // An invalid response format
+	FailureSchema     FailureReason = "schema"      // An invalid response Schema
 )
 
 type ContractResult struct {
@@ -35,7 +37,40 @@ func combineHeaders(contract serialization.Contract, suite serialization.Suite) 
 }
 
 func RunContract(contract serialization.Contract, suite serialization.Suite) ContractResult {
-	cr := ContractResult{Name: contract.Url, Pass: false}
+	if strings.HasPrefix(contract.Url, "file://") {
+		return runFileContract(contract, suite)
+	}
+	return runHttpContract(contract, suite)
+}
+
+func runFileContract(contract serialization.Contract, suite serialization.Suite) ContractResult {
+	cr := ContractResult{Name: contract.Name, Pass: false}
+	if cr.Name == "" {
+		cr.Name = contract.Url
+	}
+
+	content, err := ioutil.ReadFile(strings.TrimPrefix(contract.Url, "file://"))
+	if err != nil {
+		cr.Reason = FailureIO
+		return cr
+	}
+
+	if contract.Expect.Schema != "" {
+		cr.Reason, cr.Comment = checkSchemaOnJson(content, contract, suite)
+		if cr.Reason != "" {
+			return cr
+		}
+	}
+
+	cr.Pass = true
+	return cr
+}
+
+func runHttpContract(contract serialization.Contract, suite serialization.Suite) ContractResult {
+	cr := ContractResult{Name: contract.Name, Pass: false}
+	if cr.Name == "" {
+		cr.Name = contract.Url
+	}
 
 	res, err := RunRequest(contract.Url, combineHeaders(contract, suite))
 	if err != nil {
