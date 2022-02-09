@@ -49,36 +49,55 @@ func RunContract(contract serialization.Contract, suite serialization.Suite) Con
 	}
 
 	if contract.Expect.Schema != "" {
-		schema, found := suite.Schemas[contract.Expect.Schema]
-		if strings.HasSuffix(contract.Expect.Schema, "[]") {
-			schemaName := strings.TrimSuffix(contract.Expect.Schema, "[]")
-
-			var itemSchema openapi.Schema
-			itemSchema, found = suite.Schemas[schemaName]
-
-			schema = openapi.Schema{
-				Items: &itemSchema,
-				Type:  openapi.SchemaTypeArray,
-			}
-		}
-
-		if !found {
-			cr.Reason = FailureContract
-			return cr
-		}
-
-		json, err := JsonUnmarshal(res.Body)
-		if err != nil {
-			cr.Reason = FailureFormat
-			return cr
-		}
-
-		if !CheckSchema(schema, json, schema.Title) {
-			cr.Reason = FailureSchema
+		cr.Reason, cr.Comment = checkSchemaOnJson(res.Body, contract, suite)
+		if cr.Reason != "" {
 			return cr
 		}
 	}
 
 	cr.Pass = true
 	return cr
+}
+
+// createArraySchema creates a new Schema of type array with the schema of the given name as Items.
+// The suffix `[]` is trimmed from the given schemaName.
+func createArraySchema(schemaName string, suite serialization.Suite) (openapi.Schema, bool) {
+	schemaName = strings.TrimSuffix(schemaName, "[]")
+
+	var itemSchema openapi.Schema
+	itemSchema, found := suite.Schemas[schemaName]
+
+	schema := openapi.Schema{
+		Items: &itemSchema,
+		Type:  openapi.SchemaTypeArray,
+	}
+	return schema, found
+}
+
+func checkSchemaOnJson(data []byte, contract serialization.Contract, suite serialization.Suite) (FailureReason, string) {
+	schema, found := suite.Schemas[contract.Expect.Schema]
+
+	// Create a new array schema; possible future optimization is creating array schemas when loading the suite.
+	if strings.HasSuffix(contract.Expect.Schema, "[]") {
+		schema, found = createArraySchema(contract.Expect.Schema, suite)
+	}
+
+	// Check if the schema specified in the contract was found
+	if !found {
+		return FailureContract, ""
+	}
+
+	json, err := JsonUnmarshal(data)
+	// Check if data was valid JSON
+	if err != nil {
+		return FailureFormat, ""
+	}
+
+	// Check for valid JSON schema
+	messages := make([]string, 0)
+	if valid := CheckSchema(schema, json, schema.Title, &messages); !valid {
+		return FailureSchema, strings.Join(messages, ", ")
+	}
+
+	return "", ""
 }

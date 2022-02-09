@@ -39,7 +39,11 @@ func main() {
 
 		postfix := aurora.Reset("")
 		if !res.Pass {
-			postfix = aurora.Faint(fmt.Sprintf(" (%s)", res.Reason))
+			comment := ": " + res.Comment
+			if len(comment) == 2 {
+				comment = ""
+			}
+			postfix = aurora.Faint(fmt.Sprintf(" (%s%s)", res.Reason, comment))
 		}
 		fmt.Printf("[%s] %s%s\n", PassFail(res.Pass), res.Name, postfix)
 	}

@@ -28,6 +28,15 @@ type Schema struct {
 	Ref string `yaml:"$ref"`
 }
 
+func (s Schema) Requires(key string) bool {
+	for _, val := range s.Required {
+		if val == key {
+			return true
+		}
+	}
+	return false
+}
+
 type ParameterIn string
 
 const (

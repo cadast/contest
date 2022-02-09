@@ -3,58 +3,56 @@ package main
 import (
 	"contract-testing/src/serialization/openapi"
 	"fmt"
-	"github.com/logrusorgru/aurora/v3"
-	"log"
 )
 
-func CheckSchema(schema openapi.Schema, object interface{}, canonicalName string) bool {
-	valid := false
+func CheckSchema(schema openapi.Schema, object interface{}, canonicalName string, messages *[]string) bool {
+	typeValid := false
+	childrenValid := false
 	detectedType := "unknown"
 
 	switch obj := object.(type) {
 	case bool:
-		detectedType = "bool"
-		valid = schema.Type == openapi.SchemaTypeBoolean
+		detectedType = string(openapi.SchemaTypeBoolean)
+		typeValid = schema.Type == openapi.SchemaTypeBoolean
 	case int64:
-		detectedType = "int64"
-		valid = schema.Type == openapi.SchemaTypeInteger || schema.Type == openapi.SchemaTypeNumber
+		detectedType = string(openapi.SchemaTypeInteger)
+		typeValid = schema.Type == openapi.SchemaTypeInteger || schema.Type == openapi.SchemaTypeNumber
 	case float32:
 	case float64:
-		detectedType = "float64"
-		valid = schema.Type == openapi.SchemaTypeNumber
+		detectedType = string(openapi.SchemaTypeNumber)
+		typeValid = schema.Type == openapi.SchemaTypeNumber
 	case string:
-		detectedType = "string"
-		valid = schema.Type == openapi.SchemaTypeString
+		detectedType = string(openapi.SchemaTypeString)
+		typeValid = schema.Type == openapi.SchemaTypeString
 	case []interface{}:
-		detectedType = "[]interface{}"
-		valid = schema.Type == openapi.SchemaTypeArray
-		if valid {
+		detectedType = string(openapi.SchemaTypeArray)
+		typeValid = schema.Type == openapi.SchemaTypeArray
+		if typeValid {
 			for i, val := range obj {
-				check := CheckSchema(*schema.Items, val, fmt.Sprintf("%s[%d]", canonicalName, i))
-				valid = check && valid
+				check := CheckSchema(*schema.Items, val, fmt.Sprintf("%s[%d]", canonicalName, i), messages)
+				childrenValid = check && childrenValid
 			}
 		}
 	case map[string]interface{}:
-		detectedType = "map[string]interface{}"
-		valid = schema.Type == openapi.SchemaTypeObject
+		detectedType = string(openapi.SchemaTypeObject)
+		typeValid = schema.Type == openapi.SchemaTypeObject
 
 		for name, property := range schema.Properties {
 			property.Title = name
 			if val, ok := obj[name]; ok {
-				check := CheckSchema(property, val, canonicalName+"."+property.Title)
-				valid = check && valid
-			} else {
-				valid = false
-				log.Println(property, "not found")
+				check := CheckSchema(*property, val, canonicalName+"."+property.Title, messages)
+				childrenValid = check && childrenValid
+			} else if schema.Requires(property.Title) {
+				childrenValid = false
+				*messages = append(*messages, "missing property "+canonicalName+"."+property.Title)
 			}
 		}
 	case nil:
-		detectedType = "nil"
-		valid = schema.Nullable
+		detectedType = "null"
+		typeValid = schema.Nullable
 	}
-	if !valid {
-		log.Println(canonicalName, aurora.Faint(detectedType), PassFail(valid))
+	if !typeValid {
+		*messages = append(*messages, fmt.Sprintf("%s is %s not %s", canonicalName, detectedType, schema.Type))
 	}
-	_ = detectedType
-	return valid
+	return typeValid && childrenValid
 }
