@@ -7,7 +7,7 @@ import (
 
 func CheckSchema(schema openapi.Schema, object interface{}, canonicalName string, messages *[]string) bool {
 	typeValid := false
-	childrenValid := false
+	childrenValid := true
 	detectedType := "unknown"
 
 	switch obj := object.(type) {
