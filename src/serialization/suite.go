@@ -17,6 +17,7 @@ type Contract struct {
 	Method  string            `yaml:"method"`
 	Headers map[string]string `yaml:"headers"`
 	Expect  Expect            `yaml:"expect"`
+	Name    string            `yaml:"name"`
 }
 
 type Suite struct {
