@@ -3,10 +3,12 @@ package main
 import (
 	"contract-testing/src/serialization"
 	"contract-testing/src/serialization/openapi"
+	"flag"
 	"fmt"
 	"github.com/logrusorgru/aurora/v3"
 	"log"
 	"os"
+	"strings"
 )
 
 func PassFail(b bool) aurora.Value {
@@ -16,17 +18,58 @@ func PassFail(b bool) aurora.Value {
 	return aurora.Red("FAIL")
 }
 
+type multiStringFlag []string
+
+func (i *multiStringFlag) String() string {
+	return strings.Join(*i, ",")
+}
+
+func (i *multiStringFlag) Set(value string) error {
+	*i = append(*i, value)
+	return nil
+}
+
+func checkFilePointer(p *string) {
+	if *p == "" {
+		fmt.Printf("An empty file name is not allowed.\n")
+		os.Exit(1)
+	}
+	if _, err := os.Stat(*p); err != nil {
+		fmt.Printf("The file %s does not exist or is not accessible.\n", *p)
+		os.Exit(1)
+	}
+}
+
 func main() {
-	suite, err := serialization.LoadSuite("./../contract.yaml")
+	suiteFileP := flag.String("suite", "", "The path to the suite to run on")
+	var schemaFilesP multiStringFlag
+	flag.Var(&schemaFilesP, "schema", "Path to an OpenAPI 3.0 schema file (multiple allowed)")
+	flag.Parse()
+
+	checkFilePointer(suiteFileP)
+	if len(schemaFilesP) == 0 {
+		fmt.Printf("You need to supply at least one schema file.\n")
+		os.Exit(1)
+	}
+	for _, s := range schemaFilesP {
+		checkFilePointer(&s)
+	}
+
+	suite, err := serialization.LoadSuite(*suiteFileP)
 	if err != nil {
 		log.Fatalln("Could not load Suite YAML", err)
 	}
 
-	doc, err := openapi.LoadDocument("./../products.yaml")
-	if err != nil {
-		log.Fatalln("Could not load OpenAPI Schema YAML", err)
+	suite.Schemas = make(map[string]openapi.Schema)
+	for _, path := range schemaFilesP {
+		doc, err := openapi.LoadDocument(path)
+		if err != nil {
+			log.Fatalln("Could not load OpenAPI Schema YAML", err)
+		}
+		for k, v := range doc.Components.Schemas {
+			suite.Schemas[k] = v
+		}
 	}
-	suite.Schemas = doc.Components.Schemas
 
 	fmt.Printf("Testing %d contracts...\n\n", len(suite.Contracts))
 	successfulContracts := 0
