@@ -3,7 +3,7 @@ package openapi
 type Path struct {
 	Summary     string               `yaml:"summary"`
 	Description string               `yaml:"description"`
-	Parameters  interface{}          `yaml:"parameters"`
+	Parameters  []*Parameter         `yaml:"parameters"`
 	Operations  map[string]Operation `yaml:",inline"`
 }
 

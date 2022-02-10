@@ -60,6 +60,7 @@ func main() {
 		log.Fatalln("Could not load Suite YAML", err)
 	}
 
+	// Load all schemas from OpenAPI documents
 	suite.Schemas = make(map[string]openapi.Schema)
 	for _, path := range schemaFilesP {
 		doc, err := openapi.LoadDocument(path)
@@ -67,29 +68,18 @@ func main() {
 			log.Fatalln("Could not load OpenAPI Schema YAML", err)
 		}
 		for k, v := range doc.Components.Schemas {
-			suite.Schemas[k] = v
+			suite.Schemas[k] = *v
 		}
 	}
 
+	// Load spec files and create contracts for all operations listed
 	for _, specFile := range suite.SpecFiles {
-		doc, err := openapi.LoadDocument(specFile.Path)
+		contracts, err := specFile.CreateContracts()
 		if err != nil {
-			log.Fatalln("Could not load OpenAPI Schema YAML", err)
+			log.Fatalln("Could not create contracts for spec file ", specFile.Path, ": ", err)
 		}
-		for url, path := range doc.Paths {
-			contract, err := serialization.NewContractFromGet200Operation(specFile.BaseUrl+url, path)
-			if err != nil {
-				log.Fatalln("Could not create contract for path ", url, err)
-			}
 
-			// Check if the operation is included in the spec files operations
-			for operationId := range specFile.Operations {
-				if operationId == contract.Name {
-					suite.Contracts = append(suite.Contracts, *contract)
-					break
-				}
-			}
-		}
+		suite.Contracts = append(suite.Contracts, contracts...)
 	}
 
 	fmt.Printf("Testing %d contracts...\n\n", len(suite.Contracts))

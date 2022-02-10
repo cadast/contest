@@ -1,7 +1,7 @@
 package openapi
 
 type Components struct {
-	Schemas    map[string]Schema    `yaml:"schemas"`
+	Schemas    map[string]*Schema   `yaml:"schemas"`
 	Parameters map[string]Parameter `yaml:"parameters"`
 }
 
@@ -17,13 +17,13 @@ const (
 )
 
 type Schema struct {
-	Title       string            `yaml:"title"`
-	Type        SchemaType        `yaml:"type"`
-	Description string            `yaml:"description"`
-	Properties  map[string]Schema `yaml:"properties"`
-	Required    []string          `yaml:"required"`
-	Nullable    bool              `yaml:"nullable"`
-	Items       *Schema           `yaml:"items"`
+	Title       string             `yaml:"title"`
+	Type        SchemaType         `yaml:"type"`
+	Description string             `yaml:"description"`
+	Properties  map[string]*Schema `yaml:"properties"`
+	Required    []string           `yaml:"required"`
+	Nullable    bool               `yaml:"nullable"`
+	Items       *Schema            `yaml:"items"`
 
 	Ref string `yaml:"$ref"`
 }
@@ -53,6 +53,8 @@ type Parameter struct {
 	Required        bool        `yaml:"required"`
 	Deprecated      bool        `yaml:"deprecated"`
 	AllowEmptyValue bool        `yaml:"allowEmptyValue"`
+
+	Ref string `yaml:"$ref"`
 
 	Schema Schema `yaml:"schema"`
 }

@@ -69,6 +69,19 @@ func runFileContract(contract serialization.Contract, suite serialization.Suite)
 }
 
 func runHttpContract(contract serialization.Contract, suite serialization.Suite) ContractResult {
+	headers := combineHeaders(contract, suite)
+
+	for key, value := range contract.Parameters {
+		if strings.HasPrefix(key, "path:") {
+			name := strings.TrimPrefix(key, "path:")
+			contract.Url = strings.ReplaceAll(contract.Url, "{"+name+"}", value)
+		} else if strings.HasPrefix(key, "header:") {
+			name := strings.TrimPrefix(key, "header:")
+			for headerKey, headerValue := range headers {
+				headers[headerKey] = strings.ReplaceAll(headerValue, "{"+name+"}", value)
+			}
+		}
+	}
 	cr := ContractResult{Name: contract.Name, Pass: false}
 	if contract.Name == "" {
 		cr.Name = contract.Url
@@ -76,7 +89,7 @@ func runHttpContract(contract serialization.Contract, suite serialization.Suite)
 		cr.Name = fmt.Sprintf("%s (%s)", contract.Name, contract.Url)
 	}
 
-	res, err := RunRequest(contract.Url, combineHeaders(contract, suite))
+	res, err := RunRequest(contract.Url, headers)
 	if err != nil {
 		cr.Reason = FailureHttp
 		return cr
