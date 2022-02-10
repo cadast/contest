@@ -3,6 +3,7 @@ package main
 import (
 	"contract-testing/src/serialization"
 	"contract-testing/src/serialization/openapi"
+	"fmt"
 	"io/ioutil"
 	"strings"
 )
@@ -69,8 +70,10 @@ func runFileContract(contract serialization.Contract, suite serialization.Suite)
 
 func runHttpContract(contract serialization.Contract, suite serialization.Suite) ContractResult {
 	cr := ContractResult{Name: contract.Name, Pass: false}
-	if cr.Name == "" {
+	if contract.Name == "" {
 		cr.Name = contract.Url
+	} else {
+		cr.Name = fmt.Sprintf("%s (%s)", contract.Name, contract.Url)
 	}
 
 	res, err := RunRequest(contract.Url, combineHeaders(contract, suite))
