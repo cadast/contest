@@ -84,7 +84,7 @@ func runHttpContract(contract serialization.Contract, suite serialization.Suite)
 		return cr
 	}
 
-	if contract.Expect.ContentType != "" && !strings.HasPrefix(res.ContentType, contract.Expect.ContentType+";") {
+	if contract.Expect.ContentType != "" && !strings.HasPrefix(res.ContentType+";", contract.Expect.ContentType+";") {
 		cr.Reason = FailureContentType
 		cr.Comment = "got \"" + res.ContentType + "\" not \"" + contract.Expect.ContentType + "\""
 		return cr
