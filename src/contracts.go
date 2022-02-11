@@ -11,13 +11,14 @@ import (
 type FailureReason string
 
 const (
-	FailureContract    FailureReason = "contract"                // An invalid contract
-	FailureHttp        FailureReason = "http"                    // An error while running the HTTP request
-	FailureIO          FailureReason = "io"                      // An error while fetching the data
-	FailureHttpStatus  FailureReason = "unexpected.status"       // An unexpected HTTP status code
-	FailureFormat      FailureReason = "format"                  // An invalid response format
-	FailureSchema      FailureReason = "unexpected.schema"       // An invalid response Schema
-	FailureContentType FailureReason = "unexpected.content-type" // An unexpected content type
+	FailureContract     FailureReason = "contract"                // An invalid contract
+	FailureHttp         FailureReason = "http"                    // An error while running the HTTP request
+	FailureIO           FailureReason = "io"                      // An error while fetching the data
+	FailureHttpStatus   FailureReason = "unexpected.status"       // An unexpected HTTP status code
+	FailureFormat       FailureReason = "format"                  // An invalid response format
+	FailureSchema       FailureReason = "unexpected.schema"       // An invalid response Schema
+	FailureContentType  FailureReason = "unexpected.content-type" // An unexpected content type
+	FailureResponseTime FailureReason = "unexpected.responseTime" // The response time was longer than expected
 )
 
 type ContractResult struct {
@@ -92,6 +93,7 @@ func runHttpContract(contract serialization.Contract, suite serialization.Suite)
 	res, err := RunRequest(contract.Url, headers)
 	if err != nil {
 		cr.Reason = FailureHttp
+		cr.Comment = err.Error()
 		return cr
 	}
 
@@ -111,6 +113,12 @@ func runHttpContract(contract serialization.Contract, suite serialization.Suite)
 		if cr.Reason != "" {
 			return cr
 		}
+	}
+
+	if contract.Expect.ResponseTime > 0 && res.ResponseTime > contract.Expect.ResponseTime {
+		cr.Reason = FailureResponseTime
+		cr.Comment = fmt.Sprintf("took %dms not %dms", res.ResponseTime, contract.Expect.ResponseTime)
+		return cr
 	}
 
 	cr.Pass = true

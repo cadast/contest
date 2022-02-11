@@ -14,6 +14,7 @@ type Expect struct {
 	SchemaName     string `yaml:"schema"`
 	ContentType    string `yaml:"contentType"`
 	SchemaResolved *openapi.Schema
+	ResponseTime   int64 `yaml:"responseTime"`
 }
 
 type Contract struct {
