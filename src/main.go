@@ -11,11 +11,13 @@ import (
 	"strings"
 )
 
-func PassFail(b bool) aurora.Value {
-	if b {
-		return aurora.Green("PASS")
+func PassWarnFail(i ContractVerdict) aurora.Value {
+	if i >= ContractFail {
+		return aurora.Red("FAIL")
+	} else if i >= ContractWarn {
+		return aurora.Yellow("WARN")
 	}
-	return aurora.Red("FAIL")
+	return aurora.Green("PASS")
 }
 
 type multiStringFlag []string
@@ -82,29 +84,44 @@ func main() {
 		suite.Contracts = append(suite.Contracts, contracts...)
 	}
 
+	var warningFailureReasons []FailureReason
+	for failureReason, severity := range suite.Severity {
+		if strings.ToLower(severity) == "warn" {
+			if warningFailureReasons == nil {
+				warningFailureReasons = make([]FailureReason, 0)
+			}
+			warningFailureReasons = append(warningFailureReasons, FailureReason(failureReason))
+		}
+	}
+
 	fmt.Printf("Testing %d contracts...\n\n", len(suite.Contracts))
+
 	successfulContracts := 0
+	verdict := ContractPass
+
 	for _, contract := range suite.Contracts {
 		res := RunContract(contract, *suite)
+		pass := res.Pass(&warningFailureReasons)
+		verdict |= pass
 
-		if res.Pass {
+		if pass < ContractFail {
 			successfulContracts++
 		}
 
-		postfix := aurora.Reset("")
-		if !res.Pass {
-			comment := ": " + res.Comment
-			if len(comment) == 2 {
-				comment = ""
+		postfix := ""
+		if len(res.Failures) > 0 {
+			for _, failure := range res.Failures {
+				postfix += failure.String() + "; "
 			}
-			postfix = aurora.Faint(fmt.Sprintf(" (%s%s)", res.Reason, comment))
+			postfix = strings.TrimSuffix(postfix, "; ")
+			postfix = " " + aurora.Faint("("+postfix+")").String()
 		}
-		fmt.Printf("[%s] %s%s\n", PassFail(res.Pass), res.Name, postfix)
+		fmt.Printf("[%s] %s%s\n", PassWarnFail(pass), res.Name, postfix)
 	}
 
 	fmt.Println()
 	fmt.Printf("%d/%d contracts passed.\n", successfulContracts, len(suite.Contracts))
-	fmt.Printf("Final verdict: %s\n", aurora.Bold(PassFail(successfulContracts == len(suite.Contracts))))
+	fmt.Printf("Final verdict: %s\n", aurora.Bold(PassWarnFail(verdict)))
 
 	if successfulContracts < len(suite.Contracts) {
 		os.Exit(1)

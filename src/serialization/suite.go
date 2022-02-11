@@ -41,6 +41,7 @@ type Suite struct {
 	Contracts []Contract        `yaml:"contracts"`
 	Headers   map[string]string `yaml:"headers"`
 	Schemas   map[string]openapi.Schema
+	Severity  map[string]string `yaml:"severity"`
 }
 
 type wrapper struct {

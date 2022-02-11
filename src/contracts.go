@@ -21,11 +21,69 @@ const (
 	FailureResponseTime FailureReason = "unexpected.responseTime" // The response time was longer than expected
 )
 
-type ContractResult struct {
-	Name    string
-	Pass    bool
+type Failure struct {
 	Reason  FailureReason
 	Comment string
+}
+
+func (f Failure) String() string {
+	if f.Comment != "" {
+		return string(f.Reason) + ": " + f.Comment
+	}
+	return string(f.Reason)
+}
+
+type ContractResult struct {
+	Name     string
+	Failures []Failure
+}
+
+type ContractVerdict int
+
+const (
+	ContractPass ContractVerdict = 0b000
+	ContractWarn ContractVerdict = 0b001
+	ContractFail ContractVerdict = 0b010
+)
+
+func NewContractResult(name string) ContractResult {
+	return ContractResult{
+		Name:     name,
+		Failures: make([]Failure, 0),
+	}
+}
+
+func (c *ContractResult) failure(reason FailureReason, comment string) {
+	if reason == "" {
+		return
+	}
+	c.Failures = append(c.Failures, Failure{
+		Reason:  reason,
+		Comment: comment,
+	})
+}
+
+func (c ContractResult) Pass(warningFailures *[]FailureReason) ContractVerdict {
+	if warningFailures == nil && len(c.Failures) > 0 {
+		return ContractFail
+	}
+
+	result := ContractPass
+
+outer:
+	for _, failure := range c.Failures {
+		// Check if the failure is a warning only
+		for _, warningFailure := range *warningFailures {
+			if failure.Reason == warningFailure {
+				result |= ContractWarn
+				continue outer
+			}
+		}
+
+		// If the failure is not only a warning, the contract has not passed
+		result |= ContractFail
+	}
+	return result
 }
 
 func combineHeaders(contract serialization.Contract, suite serialization.Suite) map[string]string {
@@ -47,25 +105,22 @@ func RunContract(contract serialization.Contract, suite serialization.Suite) Con
 }
 
 func runFileContract(contract serialization.Contract, suite serialization.Suite) ContractResult {
-	cr := ContractResult{Name: contract.Name, Pass: false}
+	cr := NewContractResult(contract.Name)
 	if cr.Name == "" {
 		cr.Name = contract.Url
 	}
 
 	content, err := ioutil.ReadFile(strings.TrimPrefix(contract.Url, "file://"))
 	if err != nil {
-		cr.Reason = FailureIO
+		cr.failure(FailureIO, "")
 		return cr
 	}
 
 	if contract.Expect.SchemaName != "" || contract.Expect.SchemaResolved != nil {
-		cr.Reason, cr.Comment = checkSchemaOnJson(content, contract, suite)
-		if cr.Reason != "" {
-			return cr
-		}
+		cr.failure(checkSchemaOnJson(content, contract, suite))
+		return cr
 	}
 
-	cr.Pass = true
 	return cr
 }
 
@@ -83,7 +138,7 @@ func runHttpContract(contract serialization.Contract, suite serialization.Suite)
 			}
 		}
 	}
-	cr := ContractResult{Name: contract.Name, Pass: false}
+	cr := NewContractResult(contract.Name)
 	if contract.Name == "" {
 		cr.Name = contract.Url
 	} else {
@@ -92,36 +147,27 @@ func runHttpContract(contract serialization.Contract, suite serialization.Suite)
 
 	res, err := RunRequest(contract.Url, headers)
 	if err != nil {
-		cr.Reason = FailureHttp
-		cr.Comment = err.Error()
+		cr.failure(FailureHttp, err.Error())
 		return cr
 	}
 
 	if res.StatusCode != 200 && (contract.Expect.Status == 0 || contract.Expect.Status != res.StatusCode) {
-		cr.Reason = FailureHttpStatus
+		cr.failure(FailureHttpStatus, fmt.Sprintf("got %d not %d", res.StatusCode, contract.Expect.Status))
 		return cr
 	}
 
 	if contract.Expect.ContentType != "" && !strings.HasPrefix(res.ContentType+";", contract.Expect.ContentType+";") {
-		cr.Reason = FailureContentType
-		cr.Comment = "got \"" + res.ContentType + "\" not \"" + contract.Expect.ContentType + "\""
-		return cr
+		cr.failure(FailureContentType, fmt.Sprintf("got %s not %s", res.ContentType, contract.Expect.ContentType))
 	}
 
 	if contract.Expect.SchemaName != "" || contract.Expect.SchemaResolved != nil {
-		cr.Reason, cr.Comment = checkSchemaOnJson(res.Body, contract, suite)
-		if cr.Reason != "" {
-			return cr
-		}
+		cr.failure(checkSchemaOnJson(res.Body, contract, suite))
 	}
 
 	if contract.Expect.ResponseTime > 0 && res.ResponseTime > contract.Expect.ResponseTime {
-		cr.Reason = FailureResponseTime
-		cr.Comment = fmt.Sprintf("took %dms not %dms", res.ResponseTime, contract.Expect.ResponseTime)
-		return cr
+		cr.failure(FailureResponseTime, fmt.Sprintf("took %dms not %dms", res.ResponseTime, contract.Expect.ResponseTime))
 	}
 
-	cr.Pass = true
 	return cr
 }
 
