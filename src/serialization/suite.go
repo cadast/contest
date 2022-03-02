@@ -18,12 +18,14 @@ type Expect struct {
 }
 
 type Contract struct {
-	Url        string            `yaml:"url"`
-	Method     string            `yaml:"method"`
-	Headers    map[string]string `yaml:"headers"`
-	Expect     Expect            `yaml:"expect"`
-	Name       string            `yaml:"name"`
-	Parameters map[string]string `yaml:"parameters"`
+	Url        string                 `yaml:"url"`
+	Method     string                 `yaml:"method"`
+	Headers    map[string]string      `yaml:"headers"`
+	Expect     Expect                 `yaml:"expect"`
+	Name       string                 `yaml:"name"`
+	Parameters map[string]string      `yaml:"parameters"`
+	Body       map[string]interface{} `yaml:"body"`
+	Debug      bool                   `yaml:"debug"`
 }
 
 type SpecFile struct {
@@ -33,7 +35,8 @@ type SpecFile struct {
 }
 
 type Operation struct {
-	Parameters map[string]string `yaml:"parameters"`
+	Parameters map[string]string      `yaml:"parameters"`
+	Body       map[string]interface{} `yaml:"body"`
 }
 
 type Suite struct {
@@ -128,6 +131,8 @@ func (s SpecFile) CreateContracts() ([]Contract, error) {
 			}
 			fmt.Printf("[%s] Missing parameter required %s from operation %s\n", aurora.Yellow("WARN"), parameter.Name, operationId)
 		}
+
+		contract.Body = sop.Body
 
 		contracts = append(contracts, *contract)
 	}

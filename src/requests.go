@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -14,9 +15,14 @@ type RequestResult struct {
 	ResponseTime int64
 }
 
-func RunRequest(url string, headers map[string]string) (*RequestResult, error) {
+func RunRequest(url string, headers map[string]string, body []byte) (*RequestResult, error) {
 	client := http.Client{}
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+
+	var bodyReader io.Reader
+	if body != nil {
+		bodyReader = bytes.NewReader(body)
+	}
+	req, err := http.NewRequest(http.MethodGet, url, bodyReader)
 	if err != nil {
 		return nil, err
 	}
@@ -44,11 +50,11 @@ func RunRequest(url string, headers map[string]string) (*RequestResult, error) {
 		ResponseTime: responseTime.Milliseconds(),
 	}
 
-	body, err := ioutil.ReadAll(rres.Body)
+	responseBody, err := ioutil.ReadAll(rres.Body)
 	if err != nil {
 		return nil, err
 	}
-	res.Body = body
+	res.Body = responseBody
 	res.ContentType = rres.Header.Get("Content-Type")
 
 	return &res, nil

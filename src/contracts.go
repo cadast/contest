@@ -11,6 +11,7 @@ import (
 type FailureReason string
 
 const (
+	FailureDebug        FailureReason = "debug"                   // Debug output
 	FailureContract     FailureReason = "contract"                // An invalid contract
 	FailureHttp         FailureReason = "http"                    // An error while running the HTTP request
 	FailureIO           FailureReason = "io"                      // An error while fetching the data
@@ -72,6 +73,10 @@ func (c ContractResult) Pass(warningFailures *[]FailureReason) ContractVerdict {
 
 outer:
 	for _, failure := range c.Failures {
+		if failure.Reason == FailureDebug {
+			continue
+		}
+
 		// Check if the failure is a warning only
 		for _, warningFailure := range *warningFailures {
 			if failure.Reason == warningFailure {
@@ -145,7 +150,17 @@ func runHttpContract(contract serialization.Contract, suite serialization.Suite)
 		cr.Name = fmt.Sprintf("%s (%s)", contract.Name, contract.Url)
 	}
 
-	res, err := RunRequest(contract.Url, headers)
+	var body []byte
+	if contract.Body != nil {
+		var err error
+		body, err = JsonMarshal(contract.Body)
+		if err != nil {
+			cr.failure(FailureContract, err.Error())
+			return cr
+		}
+	}
+
+	res, err := RunRequest(contract.Url, headers, body)
 	if err != nil {
 		cr.failure(FailureHttp, err.Error())
 		return cr
@@ -158,6 +173,10 @@ func runHttpContract(contract serialization.Contract, suite serialization.Suite)
 
 	if contract.Expect.ContentType != "" && !strings.HasPrefix(res.ContentType+";", contract.Expect.ContentType+";") {
 		cr.failure(FailureContentType, fmt.Sprintf("got %s not %s", res.ContentType, contract.Expect.ContentType))
+	}
+
+	if contract.Debug {
+		cr.failure(FailureDebug, string(res.Body))
 	}
 
 	if contract.Expect.SchemaName != "" || contract.Expect.SchemaResolved != nil {

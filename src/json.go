@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"strconv"
 )
 
@@ -56,4 +57,70 @@ func JsonUnmarshal(data []byte) (interface{}, error) {
 
 	// Return the default unmarshalled value, if it doesn't need to be manually unmarshalled
 	return unmarshalled, nil
+}
+
+func retypeKeysToStrings(m interface{}) (interface{}, error) {
+	switch m.(type) {
+	case map[string]interface{}:
+		retypedMap := m.(map[string]interface{})
+		for k, v := range retypedMap {
+			retyped, err := retypeKeysToStrings(v)
+			if err != nil {
+				return nil, err
+			}
+			retypedMap[k] = retyped
+		}
+		return retypedMap, nil
+	case map[interface{}]interface{}:
+		val, err := retypeMapToStringKeys(m.(map[interface{}]interface{}))
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range val {
+			retyped, err := retypeKeysToStrings(v)
+			if err != nil {
+				return nil, err
+			}
+			val[k] = retyped
+		}
+		return val, nil
+	case []interface{}:
+		arr := m.([]interface{})
+		for i, v := range arr {
+			retyped, err := retypeKeysToStrings(v)
+			if err != nil {
+				return nil, err
+			}
+			arr[i] = retyped
+		}
+		return arr, nil
+	default:
+		return m, nil
+	}
+}
+
+func retypeMapToStringKeys(m map[interface{}]interface{}) (map[string]interface{}, error) {
+	retyped := make(map[string]interface{})
+
+	for k, v := range m {
+		switch k.(type) {
+		case string:
+			break
+		default:
+			return nil, errors.New("only strings are allowed as keys in JSON objects")
+		}
+
+		retyped[k.(string)] = v
+	}
+
+	return retyped, nil
+}
+
+func JsonMarshal(data interface{}) ([]byte, error) {
+	retyped, err := retypeKeysToStrings(data)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(retyped)
 }
