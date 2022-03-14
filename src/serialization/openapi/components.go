@@ -25,6 +25,10 @@ type Schema struct {
 	Nullable    bool               `yaml:"nullable"`
 	Items       *Schema            `yaml:"items"`
 
+	AnyOf []*Schema `yaml:"anyOf"`
+	OneOf []*Schema `yaml:"oneOf"`
+	AllOf []*Schema `yaml:"allOf"`
+
 	Ref string `yaml:"$ref"`
 }
 
