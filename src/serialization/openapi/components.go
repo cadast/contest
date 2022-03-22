@@ -3,6 +3,7 @@ package openapi
 type Components struct {
 	Schemas    map[string]*Schema   `yaml:"schemas"`
 	Parameters map[string]Parameter `yaml:"parameters"`
+	Responses  map[string]Response  `yaml:"responses"`
 }
 
 type SchemaType string

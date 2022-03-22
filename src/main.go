@@ -77,7 +77,7 @@ func main() {
 	for _, specFile := range suite.SpecFiles {
 		contracts, err := specFile.CreateContracts()
 		if err != nil {
-			log.Fatalln("Could not create contracts for spec file ", specFile.Path, ": ", err)
+			log.Fatalln("Could not create contracts for spec file", specFile.Path, ":", err)
 		}
 
 		suite.Contracts = append(suite.Contracts, contracts...)

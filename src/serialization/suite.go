@@ -90,7 +90,7 @@ func NewContractFromOperation(url string, method string, operation openapi.Opera
 func (s SpecFile) CreateContracts() ([]Contract, error) {
 	doc, err := openapi.LoadDocument(s.Path)
 	if err != nil {
-		return nil, errors.New("could not load OpenAPI schema file")
+		return nil, err
 	}
 
 	contracts := make([]Contract, 0, len(s.Operations))

@@ -45,8 +45,13 @@ func (document Document) ResolveRefs() error {
 
 		for _, op := range path.Operations {
 			for _, response := range op.Responses {
+				err := response.resolveRef(document)
+				if err != nil {
+					return err
+				}
+
 				for _, content := range response.Content {
-					err := content.Schema.resolveRef(document)
+					err = content.Schema.resolveRef(document)
 					if err != nil {
 						return err
 					}
