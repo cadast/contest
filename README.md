@@ -6,15 +6,41 @@ A tool for API contract testing.
 
 `contest --schema openapidoc.yaml --schema openapidoc2.yaml --suite suite.yaml`
 
-### Suite YAML
+### Contest YAML
 
-The suite.yaml file describes the suite of contracts that should be tested.
+The contest.yaml file describes the suite of contracts that should be tested.
 
 A suite has the following properties:
 - `headers`: global headers added to every request
 - `severity`: configure the severity of failure reasons (see section [Severity](#severity))
 - `contracts`: single contracts testing a single URL (see section [Contract](#contract))
 - `specFiles`: OpenAPI documents to load and test (see section [Spec File](#spec-file))
+
+#### Linting
+
+The contestSchema.json file describes the format of the contest.yaml file. You can add this schema
+to your editor to have linting in your contestSchema.json.
+
+##### VSCode
+
+In VSCode using the [YAML Extension from RedHat](https://marketplace.visualstudio.com/items?itemName=redhat.vscode-yaml)
+you can easily add the schema, by modifying your workspace or user config:
+
+```json5
+{
+  // ... other config entries
+  "yaml.schemas": {
+    "<PATH_TO_CONTESTSCHEMA.JSON>": [
+      "contest.yaml",
+      "*.contest.yaml"
+    ],
+  }
+}
+```
+
+##### JetBrains
+
+To add the schema to a JetBrains IDE, follow this guide: [Using custom JSON schemas](https://www.jetbrains.com/help/idea/json.html#ws_json_schema_add_custom).
 
 
 #### Example

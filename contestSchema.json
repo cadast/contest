@@ -1,0 +1,123 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "$id": "https://mymuesli.com/contest.schema.json",
+    "title": "Contest",
+    "description": "Contest Contract Testing Suite",
+    "type": "object",
+    "properties": {
+        "suite": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "headers": {
+                    "$ref": "#/$defs/Headers"
+                },
+                "severity": {
+                    "type": "object"
+                },
+                "contracts": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "url": {
+                                "$ref": "#/$defs/URI"
+                            },
+                            "name": {
+                                "type": "string"
+                            },
+                            "method": {
+                                "type": "string"
+                            },
+                            "headers": {
+                                "$ref": "#/$defs/Headers"
+                            },
+                            "expect": {
+                                "$ref": "#/$defs/Expect"
+                            },
+                            "parameters": {
+                                "$ref": "#/$defs/Parameters"
+                            },
+                            "body": {
+                                "$ref": "#/$defs/Body"
+                            }
+                        },
+                        "required": [
+                            "url"
+                        ]
+                    }
+                },
+                "specFiles": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                            "path": {
+                                "type": "string"
+                            },
+                            "baseUrl": {
+                                "$ref": "#/$defs/URI"
+                            },
+                            "operations": {
+                                "type": "object",
+                                "additionalProperties": {
+                                    "$ref": "#/$defs/Operation"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "$defs": {
+        "Expect": {
+            "title": "Expect",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "status": {
+                    "type": "integer"
+                },
+                "contentType": {
+                    "type": "string"
+                },
+                "schema": {
+                    "type": "string"
+                },
+                "responseTime": {
+                    "type": "integer"
+                }
+            }
+        },
+        "Headers": {
+            "title": "Headers",
+            "type": "object"
+        },
+        "Body": {
+            "title": "Body",
+            "type": "object"
+        },
+        "Parameters": {
+            "title": "Parameters",
+            "type": "object"
+        },
+        "URI": {
+            "title": "URI",
+            "type": "string"
+        },
+        "Operation": {
+            "type": [
+                "object",
+                "null"
+            ],
+            "additionalProperties": false,
+            "properties": {
+                "parameters": {
+                    "$ref": "#/$defs/Parameters"
+                }
+            }
+        }
+    }
+}
