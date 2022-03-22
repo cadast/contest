@@ -43,16 +43,12 @@ func checkFilePointer(p *string) {
 }
 
 func main() {
-	suiteFileP := flag.String("suite", "", "The path to the suite to run on")
+	suiteFileP := flag.String("suite", "./contest.yaml", "The path to the suite to run on")
 	var schemaFilesP multiStringFlag
 	flag.Var(&schemaFilesP, "schema", "Path to an OpenAPI 3.0 schema file (multiple allowed)")
 	flag.Parse()
 
 	checkFilePointer(suiteFileP)
-	if len(schemaFilesP) == 0 {
-		fmt.Printf("You need to supply at least one schema file.\n")
-		os.Exit(1)
-	}
 	for _, s := range schemaFilesP {
 		checkFilePointer(&s)
 	}
@@ -60,6 +56,9 @@ func main() {
 	suite, err := serialization.LoadSuite(*suiteFileP)
 	if err != nil {
 		log.Fatalln("Could not load Suite YAML", err)
+	}
+	if *suiteFileP == "./contest.yaml" {
+		fmt.Printf("Using testing suite from contest.yaml.\n\n")
 	}
 
 	// Load all schemas from OpenAPI documents
