@@ -1,6 +1,12 @@
 # Contest
 
-A tool for API contract testing.
+A simple tool for contract testing web APIs.
+
+## Installation
+
+You can find the binaries of the latest release [here](https://github.com/cadast/contest/releases/latest).
+
+There is also a homebrew package for macOS which you can install by running `brew install cadast/contest/contest`. 
 
 ## Usage
 
