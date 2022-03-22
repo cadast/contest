@@ -113,3 +113,15 @@ Supported failure reasons:
 | `unexpected.schema`       | Schema did not match                    |
 | `unexpected.content-type` | Unexpected Content-Type response header |
 | `unexpected.responseTime` | Response time was greater than expected |
+
+### Supported Validations
+
+The following OpenAPI Schema attributes are currently validated:
+
+- type: object, array, integer, string, number, boolean
+- properties
+- items
+- oneOf, anyOf, allOf
+- nullable
+- required
+- format: string.uri

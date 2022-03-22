@@ -16,6 +16,12 @@ const (
 	SchemaTypeBoolean SchemaType = "boolean"
 )
 
+type SchemaFormat string
+
+const (
+	SchemaFormatUri SchemaFormat = "uri"
+)
+
 type Schema struct {
 	Title       string             `yaml:"title"`
 	Type        SchemaType         `yaml:"type"`
@@ -24,6 +30,7 @@ type Schema struct {
 	Required    []string           `yaml:"required"`
 	Nullable    bool               `yaml:"nullable"`
 	Items       *Schema            `yaml:"items"`
+	Format      SchemaFormat       `yaml:"format"`
 
 	AnyOf []*Schema `yaml:"anyOf"`
 	OneOf []*Schema `yaml:"oneOf"`

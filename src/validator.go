@@ -3,6 +3,7 @@ package main
 import (
 	"contract-testing/src/serialization/openapi"
 	"fmt"
+	"net/url"
 )
 
 func CheckSchema(schema openapi.Schema, object interface{}, canonicalName string, messages *[]string) bool {
@@ -61,6 +62,13 @@ func CheckSchema(schema openapi.Schema, object interface{}, canonicalName string
 	case string:
 		detectedType = string(openapi.SchemaTypeString)
 		typeValid = schema.Type == openapi.SchemaTypeString
+
+		if schema.Format == openapi.SchemaFormatUri {
+			val, err := url.Parse(obj)
+			if err != nil || val.Host == "" || val.Scheme == "" {
+				*messages = append(*messages, fmt.Sprintf("%s doesn't have format %s", canonicalName, "uri"))
+			}
+		}
 	case []interface{}:
 		detectedType = string(openapi.SchemaTypeArray)
 		typeValid = schema.Type == openapi.SchemaTypeArray
