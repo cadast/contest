@@ -102,7 +102,21 @@ func combineHeaders(contract serialization.Contract, suite serialization.Suite) 
 	return headers
 }
 
-func RunContract(contract serialization.Contract, suite serialization.Suite) ContractResult {
+func RunContract(contract serialization.Contract, suite serialization.Suite, warningFailures *[]FailureReason) ContractResult {
+	if len(contract.AnyOf) > 0 {
+		failures := make([]Failure, 0)
+		for _, subcontract := range contract.AnyOf {
+			cr := RunContract(*subcontract, suite, warningFailures)
+			if cr.Pass(warningFailures) <= ContractWarn {
+				return cr
+			}
+			failures = append(failures, cr.Failures...)
+		}
+		return ContractResult{
+			Name:     contract.Name,
+			Failures: failures,
+		}
+	}
 	if strings.HasPrefix(contract.Url, "file://") {
 		return runFileContract(contract, suite)
 	}

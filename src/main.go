@@ -99,7 +99,7 @@ func main() {
 	verdict := ContractPass
 
 	for _, contract := range suite.Contracts {
-		res := RunContract(contract, *suite)
+		res := RunContract(contract, *suite, &warningFailureReasons)
 		pass := res.Pass(&warningFailureReasons)
 		verdict |= pass
 

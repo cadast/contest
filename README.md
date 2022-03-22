@@ -96,6 +96,8 @@ Supported expectations:
 | `schema`       | Schema of a JSON response (can be suffixed with `[]` for an array) |
 | `responseTime` | The maximum allowed response time in ms                           |
 
+A contract can have the `anyOf` parameter, which is a list of contracts. If set, the response will be validated against
+all of those and if at least one subcontract does not fail, the contract will return that verdict.
 
 #### Spec File
 

@@ -2,11 +2,12 @@ package serialization
 
 import (
 	"contract-testing/src/serialization/openapi"
-	"errors"
 	"fmt"
 	"github.com/logrusorgru/aurora/v3"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"log"
+	"strconv"
 )
 
 type Expect struct {
@@ -26,6 +27,8 @@ type Contract struct {
 	Parameters map[string]string      `yaml:"parameters"`
 	Body       map[string]interface{} `yaml:"body"`
 	Debug      bool                   `yaml:"debug"`
+
+	AnyOf []*Contract `yaml:"anyOf"`
 }
 
 type SpecFile struct {
@@ -66,19 +69,55 @@ func LoadSuite(path string) (*Suite, error) {
 }
 
 func NewContractFromOperation(url string, method string, operation openapi.Operation) (*Contract, error) {
-	if _, found := operation.Responses["200"]; !found {
-		return nil, errors.New("could not find 200 response in operation " + operation.OperationId)
+	if len(operation.Responses) == 0 {
+		return nil, fmt.Errorf("could not find any response in operation %s", operation.OperationId)
+	} else if len(operation.Responses) == 1 {
+		for statusCode := range operation.Responses {
+			if statusCode != "200" {
+				log.Println("info: operation", operation, "does not have a 200 response.")
+			}
+			return NewContractFromOperationWithStatus(url, method, operation, statusCode)
+		}
 	}
-	if _, found := operation.Responses["200"].Content["application/json"]; !found {
-		return nil, errors.New("could not find application/json content in operation " + operation.OperationId)
+
+	subcontracts := make([]*Contract, 0)
+	for statusCode := range operation.Responses {
+		subcontract, err := NewContractFromOperationWithStatus(url, method, operation, statusCode)
+		if err != nil {
+			return nil, err
+		}
+		subcontracts = append(subcontracts, subcontract)
 	}
-	schema := operation.Responses["200"].Content["application/json"].Schema
 	return &Contract{
-		Url:     url,
-		Method:  method,
-		Headers: nil,
+		Url:        url,
+		Method:     method,
+		Name:       operation.OperationId,
+		AnyOf:      subcontracts,
+		Parameters: make(map[string]string, 0),
+	}, nil
+}
+
+func NewContractFromOperationWithStatus(url string, method string, operation openapi.Operation, statusCode string) (*Contract, error) {
+	var statusCodeInt int64
+	var err error
+	if statusCodeInt, err = strconv.ParseInt(statusCode, 10, 64); err != nil {
+		return nil, fmt.Errorf("invalid status code: %s", statusCode)
+	}
+
+	if _, found := operation.Responses[statusCode]; !found {
+		return nil, fmt.Errorf("could not find %s response in operation %s", statusCode, operation.OperationId)
+	}
+	if _, found := operation.Responses[statusCode].Content["application/json"]; !found {
+		return nil, fmt.Errorf("could not find application/json content in operation %s (%s)", operation.OperationId, statusCode)
+	}
+
+	schema := operation.Responses[statusCode].Content["application/json"].Schema
+
+	return &Contract{
+		Url:    url,
+		Method: method,
 		Expect: Expect{
-			Status:         200,
+			Status:         int(statusCodeInt),
 			SchemaResolved: schema,
 			ContentType:    "application/json",
 		},
@@ -133,8 +172,22 @@ func (s SpecFile) CreateContracts() ([]Contract, error) {
 		}
 
 		contract.Body = sop.Body
+		contract.copyAttributesToChildren()
 
 		contracts = append(contracts, *contract)
 	}
 	return contracts, nil
+}
+
+// copyAttributesToChildren recursively copies Contract.Parameters and Contract.Body to its subcontracts (anyOf)
+func (c *Contract) copyAttributesToChildren() {
+	if c.AnyOf == nil {
+		return
+	}
+	for _, contract := range c.AnyOf {
+		contract.Parameters = c.Parameters
+		contract.Body = c.Body
+
+		contract.copyAttributesToChildren()
+	}
 }

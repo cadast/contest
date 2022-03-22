@@ -18,33 +18,7 @@
                 "contracts": {
                     "type": "array",
                     "items": {
-                        "type": "object",
-                        "properties": {
-                            "url": {
-                                "$ref": "#/$defs/URI"
-                            },
-                            "name": {
-                                "type": "string"
-                            },
-                            "method": {
-                                "type": "string"
-                            },
-                            "headers": {
-                                "$ref": "#/$defs/Headers"
-                            },
-                            "expect": {
-                                "$ref": "#/$defs/Expect"
-                            },
-                            "parameters": {
-                                "$ref": "#/$defs/Parameters"
-                            },
-                            "body": {
-                                "$ref": "#/$defs/Body"
-                            }
-                        },
-                        "required": [
-                            "url"
-                        ]
+                        "$ref": "#/$defs/Contract"
                     }
                 },
                 "specFiles": {
@@ -72,6 +46,41 @@
         }
     },
     "$defs": {
+        "Contract": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "$ref": "#/$defs/URI"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "headers": {
+                    "$ref": "#/$defs/Headers"
+                },
+                "expect": {
+                    "$ref": "#/$defs/Expect"
+                },
+                "parameters": {
+                    "$ref": "#/$defs/Parameters"
+                },
+                "body": {
+                    "$ref": "#/$defs/Body"
+                },
+                "anyOf": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/Contract"
+                    }
+                }
+            },
+            "required": [
+                "url"
+            ]
+        },
         "Expect": {
             "title": "Expect",
             "type": "object",
