@@ -1,0 +1,103 @@
+suite:
+  headers:
+    apiKey: abc1234
+    Cookie: session=123bc
+
+  # Modify how severe a failure reason is. A complete list of failure reasons can be found in the README.md
+  severity:
+    # If the response time is higher than expected, don't fail but only warn
+    unexpected.responseTime: warn
+
+  contracts:
+    - url: https://example.com/api/posts
+      name: api.posts.create
+      method: POST
+      # The body will be JSON encoded and sent as the request body
+      body:
+        title: Blog Post
+        content: Lorem impsum
+
+      # extends/overwrites the globally defined headers
+      headers:
+        User-Agent: TestAgent/1.0
+
+      # The expectations about the response
+      expect:
+        contentType: application/json
+
+        # Total response time in ms.
+        responseTime: 150
+
+        # HTTP response code
+        status: 200
+
+        # The name of the schema that is expected. Schema can be loaded from the components section of a schema
+        # passed via CLI parameter --schema.
+        # An array can be expected by adding [] to the end of the name:
+        # schema: Post[]
+        schema: Post
+    - url: https://example.com/api/posts/{postId}
+      name: view post
+      method: get # is the default
+
+      headers:
+        # Override the global Cookie header
+        Cookie: session:{sessionId}
+
+      parameters:
+        # Assign 4 to the postId parameter in the path (url).
+        path:postId: 4
+        # Parameters can also be replaced in headers.
+        headers:sessionId: session5
+
+    - url: https://example.com/api/posts/{postId}
+      name: view post or get error
+      method: get # is the default
+      parameters:
+        path:postId: 4
+
+      # The response will be validated against these subcontracts and if one doesn't fail its result will be returned.
+      anyOf:
+        - url: https://example.com/api/posts/{postId}
+          expect:
+            schema: Post
+        - url: https://example.com/api/posts/{postId}
+          expect:
+            schema: ErrorMessage
+
+  specFiles:
+    - path: ./openapi_document.yaml
+      # A base URL that is prepended to all paths defined in the OpenAPI document
+      baseUrl: https://example.com/api
+
+      # A list of all operations from the OpenAPI document that should be validated
+      operations:
+        # Validate the operation with id api.posts.create
+        api.posts.view:
+          # Values for the parameters defined in the operation or path
+          parameters:
+            postId: 123
+
+          # If there are multiple responses defined in the OpenAPI document, a contract with anyOf is created.
+        api.posts.comments.view:
+          # A list of parameters common to all parameter sets
+          parameters:
+            postId: 123
+
+          # List of parameter sets. Each parameter set will be validated independently. Parameters from the parameters
+          # array are implicitly set, but can be overridden.
+          parameterSets:
+            - commentId: 2
+            - commentId: 3
+
+        # For clarification: the definitions above are equivalent to the following ones:
+        #
+        # api.posts.view:
+        #   parameterSets:
+        #     - postId: 123
+        # api.posts.comments.view:
+        #   parameterSets:
+        #     - postId: 123
+        #       commentId: 2
+        #     - postId: 123
+        #       commentId: 3

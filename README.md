@@ -51,35 +51,7 @@ To add the schema to a JetBrains IDE, follow this guide: [Using custom JSON sche
 
 #### Example
 
-```yaml
-suite:
-  # headers that will be added to every request
-  headers:
-    Api-Key: 1234
-  
-  # configure the severity of failure reasons to only warn not fail the entire suite
-  severity:
-    unexpected.responseTime: warn
-  
-  # Contracts
-  contracts:
-    - url: https://example.com/api/test-me
-      headers:
-        # global headers can be overridden
-      expect:
-        # ... expectations
-  
-  # Spec files
-  specFiles:
-    - path: ./openapidoc.yaml
-      baseUrl: https://example.com/api
-      operations:
-        api.list:
-        api.view:
-          parameters:
-            id: 123
-```
-
+You can find a complete example in the `example.contest.yaml`.
 
 #### Contract
 
