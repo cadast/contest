@@ -129,6 +129,9 @@ parameters:
   header:param: super_interesting
 ```
 
+**ParameterSets:** ParameterSets are a list of Parameters. For every ParameterSet a copy of the contract is created with
+the parameters of that set.
+
 #### Severity
 
 Different failure reasons can have different severities. This can be used in cases where

@@ -112,6 +112,13 @@
             "title": "Parameters",
             "type": "object"
         },
+        "ParameterSets": {
+            "title": "ParameterSets",
+            "type": "array",
+            "items": {
+                "type": "object"
+            }
+        },
         "URI": {
             "title": "URI",
             "type": "string"
@@ -125,6 +132,9 @@
             "properties": {
                 "parameters": {
                     "$ref": "#/$defs/Parameters"
+                },
+                "parameterSets": {
+                    "$ref": "#/$defs/ParameterSets"
                 }
             }
         }

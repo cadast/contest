@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"strconv"
+	"strings"
 )
 
 type Expect struct {
@@ -38,8 +39,9 @@ type SpecFile struct {
 }
 
 type Operation struct {
-	Parameters map[string]string      `yaml:"parameters"`
-	Body       map[string]interface{} `yaml:"body"`
+	Parameters    map[string]string      `yaml:"parameters"`
+	ParameterSets []map[string]string    `yaml:"parameterSets"`
+	Body          map[string]interface{} `yaml:"body"`
 }
 
 type Suite struct {
@@ -121,7 +123,7 @@ func NewContractFromOperationWithStatus(url string, method string, operation ope
 			SchemaResolved: schema,
 			ContentType:    "application/json",
 		},
-		Name:       operation.OperationId,
+		Name:       fmt.Sprintf("%s[response:%s]", operation.OperationId, statusCode),
 		Parameters: make(map[string]string, 0),
 	}, nil
 }
@@ -146,37 +148,54 @@ func (s SpecFile) CreateContracts() ([]Contract, error) {
 		}
 
 		// Copy parameters from the spec file operation to the contract
-		for key, value := range sop.Parameters {
-			contract.Parameters[key] = value
-		}
+		contract.Parameters = deepCopyStringMap(sop.Parameters)
 
-		// Check if all parameters from the path are in the contracts parameters
-		for _, parameter := range doc.Paths[url].Parameters {
-			// Check if the contract has the parameter including the location part
-			_, found := contract.Parameters[string(parameter.In)+":"+parameter.Name]
-			if found {
-				continue
-			}
-
-			// Check if the contract has a parameter with the same name but missing the location part
-			_, found = contract.Parameters[parameter.Name]
-			if found {
-				// Copy existing parameter value to new parameter key with the location part
-				contract.Parameters[string(parameter.In)+":"+parameter.Name] = contract.Parameters[parameter.Name]
-			}
-
-			if found || !parameter.Required {
-				continue
-			}
-			fmt.Printf("[%s] Missing parameter required %s from operation %s\n", aurora.Yellow("WARN"), parameter.Name, operationId)
+		if sop.ParameterSets == nil {
+			sop.ParameterSets = make([]map[string]string, 1)
+			sop.ParameterSets[0] = sop.Parameters
 		}
 
 		contract.Body = sop.Body
 		contract.copyAttributesToChildren()
 
-		contracts = append(contracts, *contract)
+		for i, parameterSet := range sop.ParameterSets {
+			parameterSetContract := contract.deepCopy()
+			if len(sop.ParameterSets) > 1 {
+				parameterSetContract.UpdateName(fmt.Sprintf("%s[paramSet:%d]", contract.Name, i))
+			}
+
+			parameterSetContract.Parameters = deepCopyStringMap(parameterSet)
+			parameterSetContract.checkPathParameters(doc.Paths[url].Parameters, operationId)
+			parameterSetContract.copyAttributesToChildren()
+
+			contracts = append(contracts, *parameterSetContract)
+		}
 	}
 	return contracts, nil
+}
+
+// checkPathParameters checks if all parameters from the path are in the contracts parameters. If the location part of
+// the parameter is missing in the Contract, it is added using the information from the path.
+func (c *Contract) checkPathParameters(parameters []*openapi.Parameter, operationId string) {
+	for _, parameter := range parameters {
+		// Check if the contract has the parameter including the location part
+		_, found := c.Parameters[string(parameter.In)+":"+parameter.Name]
+		if found {
+			continue
+		}
+
+		// Check if the contract has a parameter with the same name but missing the location part
+		_, found = c.Parameters[parameter.Name]
+		if found {
+			// Copy existing parameter value to new parameter key with the location part
+			c.Parameters[string(parameter.In)+":"+parameter.Name] = c.Parameters[parameter.Name]
+		}
+
+		if found || !parameter.Required {
+			continue
+		}
+		fmt.Printf("[%s] Missing parameter required %s from operation %s\n", aurora.Yellow("WARN"), parameter.Name, operationId)
+	}
 }
 
 // copyAttributesToChildren recursively copies Contract.Parameters and Contract.Body to its subcontracts (anyOf)
@@ -190,4 +209,82 @@ func (c *Contract) copyAttributesToChildren() {
 
 		contract.copyAttributesToChildren()
 	}
+}
+
+// UpdateName replaces the name of the contract with new. Subcontracts are updated such that the old name of this
+// contract is replaced by the new name, but the rest of the subcontract's name is preserved.
+func (c *Contract) UpdateName(new string) {
+	c.updateName(c.Name, new)
+}
+
+func (c *Contract) updateName(old string, new string) {
+	if c.AnyOf == nil {
+		return
+	}
+	c.Name = strings.ReplaceAll(c.Name, old, new)
+	for _, contract := range c.AnyOf {
+
+		contract.updateName(old, new)
+	}
+}
+
+func (c *Contract) deepCopy() *Contract {
+	copied := &Contract{
+		Url:        c.Url,
+		Method:     c.Method,
+		Headers:    deepCopyStringMap(c.Headers),
+		Expect:     c.Expect,
+		Name:       c.Name,
+		Parameters: deepCopyStringMap(c.Parameters),
+		Body:       deepCopyMap(c.Body),
+		Debug:      c.Debug,
+		AnyOf:      make([]*Contract, len(c.AnyOf)),
+	}
+	copied.Body = deepCopyMap(c.Body)
+	for k, v := range c.AnyOf {
+		copied.AnyOf[k] = v.deepCopy()
+	}
+
+	return copied
+}
+
+func deepCopyInterface(m interface{}) interface{} {
+	switch m.(type) {
+	case map[string]string:
+		log.Println("copy string map")
+		return deepCopyStringMap(m.(map[string]string))
+	case map[string]interface{}:
+		log.Println("copy map")
+		return deepCopyMap(m.(map[string]interface{}))
+	case []interface{}:
+		log.Println("copy array")
+		return deepCopyArray(m.([]interface{}))
+	default:
+		log.Println("copy default")
+		return m
+	}
+}
+
+func deepCopyStringMap(m map[string]string) map[string]string {
+	copied := make(map[string]string)
+	for k, v := range m {
+		copied[k] = v
+	}
+	return copied
+}
+
+func deepCopyMap(m map[string]interface{}) map[string]interface{} {
+	copied := make(map[string]interface{})
+	for k, v := range m {
+		copied[k] = deepCopyInterface(v)
+	}
+	return copied
+}
+
+func deepCopyArray(m []interface{}) []interface{} {
+	copied := make([]interface{}, len(m))
+	for k, v := range m {
+		copied[k] = deepCopyInterface(v)
+	}
+	return copied
 }
