@@ -1,65 +1,83 @@
 package openapi
 
 import (
-	"fmt"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 )
 
 type Document struct {
 	Components Components      `yaml:"components"`
 	Paths      map[string]Path `yaml:"paths"`
+
+	AbsolutePath string
 }
 
 func LoadDocument(path string) (*Document, error) {
+	document, err := loadDocumentNoResolve(path)
+	if err != nil {
+		return nil, err
+	}
+
+	return document, document.ResolveRefs()
+}
+
+func loadDocumentNoResolve(path string) (*Document, error) {
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
 	content, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
 	document := Document{}
+	document.AbsolutePath = path
 	err = yaml.Unmarshal(content, &document)
-	if err != nil {
-		return nil, err
-	}
 
-	return &document, document.ResolveRefs()
-}
+	// Replace all "local" refs with absolute ones
 
-func (document Document) ResolveRefs() error {
 	for _, schema := range document.Components.Schemas {
-		err := schema.resolveRef(document)
-		if err != nil {
-			return err
+		if strings.HasPrefix(schema.Ref, "#") {
+			schema.Ref = document.AbsolutePath + schema.Ref
+		}
+	}
+	for _, response := range document.Components.Responses {
+		if strings.HasPrefix(response.Ref, "#") {
+			response.Ref = document.AbsolutePath + response.Ref
+		}
+	}
+	for _, parameter := range document.Components.Parameters {
+		if strings.HasPrefix(parameter.Ref, "#") {
+			parameter.Ref = document.AbsolutePath + parameter.Ref
 		}
 	}
 
 	for _, path := range document.Paths {
 		for _, parameter := range path.Parameters {
-			err := parameter.resolveRef(document)
-			if err != nil {
-				return err
+			if strings.HasPrefix(parameter.Ref, "#") {
+				parameter.Ref = document.AbsolutePath + parameter.Ref
 			}
 		}
 
 		for _, op := range path.Operations {
 			for _, response := range op.Responses {
-				err := response.resolveRef(document)
-				if err != nil {
-					return err
+				if strings.HasPrefix(response.Ref, "#") {
+					response.Ref = document.AbsolutePath + response.Ref
 				}
 
-				for _, content := range response.Content {
-					err = content.Schema.resolveRef(document)
-					if err != nil {
-						return err
+				for _, mediaType := range response.Content {
+					if strings.HasPrefix(mediaType.Schema.Ref, "#") {
+						mediaType.Schema.Ref = document.AbsolutePath + mediaType.Schema.Ref
 					}
 				}
 			}
 		}
 	}
-	return nil
+
+	return &document, err
 }
 
 // FindOperationById gets the operation with the given id from a document.
@@ -73,57 +91,4 @@ func (document Document) FindOperationById(id string) (string, string, *Operatio
 		}
 	}
 	return "", "", nil, false
-}
-
-func (s *Schema) resolveRef(document Document) error {
-	// Resolve ref in self
-	if s.Ref != "" {
-		if !strings.HasPrefix(s.Ref, "#/components/schemas/") {
-			return fmt.Errorf("unknown $ref format: %s", s.Ref)
-		}
-		ref := strings.TrimPrefix(s.Ref, "#/components/schemas/")
-		if _, ok := document.Components.Schemas[ref]; !ok {
-			return fmt.Errorf("could not resolve $ref %s", s.Ref)
-		}
-		resolved := document.Components.Schemas[ref]
-		*s = *resolved
-	}
-
-	// Recursively resolve refs in properties
-	for _, property := range s.Properties {
-		err := property.resolveRef(document)
-		if err != nil {
-			return err
-		}
-	}
-
-	// Recursively resolve refs in items
-	if s.Items != nil {
-		err := s.Items.resolveRef(document)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (p *Parameter) resolveRef(document Document) error {
-	if p.Ref != "" {
-		if !strings.HasPrefix(p.Ref, "#/components/parameters/") {
-			return fmt.Errorf("unknown $ref format: %s", p.Ref)
-		}
-		ref := strings.TrimPrefix(p.Ref, "#/components/parameters/")
-		if _, ok := document.Components.Parameters[ref]; !ok {
-			return fmt.Errorf("could not resolve $ref %s", p.Ref)
-		}
-		resolved := document.Components.Parameters[ref]
-		*p = resolved
-	}
-
-	err := p.Schema.resolveRef(document)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

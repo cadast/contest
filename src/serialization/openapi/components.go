@@ -68,5 +68,5 @@ type Parameter struct {
 
 	Ref string `yaml:"$ref"`
 
-	Schema Schema `yaml:"schema"`
+	Schema *Schema `yaml:"schema"`
 }

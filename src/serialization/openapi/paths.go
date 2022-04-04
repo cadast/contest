@@ -1,10 +1,5 @@
 package openapi
 
-import (
-	"fmt"
-	"strings"
-)
-
 type Path struct {
 	Summary     string               `yaml:"summary"`
 	Description string               `yaml:"description"`
@@ -29,20 +24,4 @@ type Response struct {
 
 type MediaType struct {
 	Schema *Schema `yaml:"schema"`
-}
-
-func (r *Response) resolveRef(document Document) error {
-	if r.Ref != "" {
-		if !strings.HasPrefix(r.Ref, "#/components/responses/") {
-			return fmt.Errorf("unknown $ref format: %s", r.Ref)
-		}
-		ref := strings.TrimPrefix(r.Ref, "#/components/responses/")
-		if _, ok := document.Components.Responses[ref]; !ok {
-			return fmt.Errorf("could not resolve $ref %s", r.Ref)
-		}
-		resolved := document.Components.Responses[ref]
-		*r = resolved
-	}
-
-	return nil
 }
