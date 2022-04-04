@@ -10,8 +10,13 @@ import (
 type Document struct {
 	Components Components      `yaml:"components"`
 	Paths      map[string]Path `yaml:"paths"`
+	Servers    []Server        `yaml:"servers"`
 
 	AbsolutePath string
+}
+
+type Server struct {
+	Url string `yaml:"url"`
 }
 
 func LoadDocument(path string) (*Document, error) {

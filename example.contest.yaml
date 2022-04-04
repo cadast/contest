@@ -68,6 +68,7 @@ suite:
   specFiles:
     - path: ./openapi_document.yaml
       # A base URL that is prepended to all paths defined in the OpenAPI document
+      # By default contracts for all servers from the OpenAPI document are generated.
       baseUrl: https://example.com/api
 
       # A list of all operations from the OpenAPI document that should be validated

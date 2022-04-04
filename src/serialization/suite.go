@@ -134,6 +134,27 @@ func (s SpecFile) CreateContracts() ([]Contract, error) {
 		return nil, err
 	}
 
+	if s.BaseUrl != "" {
+		return s.createContractsWithBaseUrl(doc, s.BaseUrl)
+	}
+
+	if len(doc.Servers) == 0 {
+		return nil, fmt.Errorf("specify either a baseUrl in the contest suite or servers in the OpenAPI document")
+	}
+
+	allContracts := make([]Contract, 0, len(s.Operations)*len(doc.Servers))
+	for _, server := range doc.Servers {
+		contracts, err := s.createContractsWithBaseUrl(doc, server.Url)
+		if err != nil {
+			return nil, err
+		}
+		allContracts = append(allContracts, contracts...)
+	}
+
+	return allContracts, nil
+}
+
+func (s SpecFile) createContractsWithBaseUrl(doc *openapi.Document, baseUrl string) ([]Contract, error) {
 	contracts := make([]Contract, 0, len(s.Operations))
 
 	for operationId, sop := range s.Operations {
@@ -142,7 +163,7 @@ func (s SpecFile) CreateContracts() ([]Contract, error) {
 			return nil, fmt.Errorf("operation %s not found", operationId)
 		}
 
-		contract, err := NewContractFromOperation(s.BaseUrl+url, method, *op)
+		contract, err := NewContractFromOperation(baseUrl+url, method, *op)
 		if err != nil {
 			return nil, err
 		}
