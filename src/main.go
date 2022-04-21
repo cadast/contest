@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 )
 
 func PassWarnFail(i ContractVerdict) aurora.Value {
@@ -44,6 +45,7 @@ func checkFilePointer(p *string) {
 
 func main() {
 	suiteFileP := flag.String("suite", "./contest.yaml", "The path to the suite to run on")
+	numWorkers := flag.Int("workers", 1, "Number of workers")
 	var schemaFilesP multiStringFlag
 	flag.Var(&schemaFilesP, "schema", "Path to an OpenAPI 3.0 schema file (multiple allowed)")
 	flag.Parse()
@@ -98,8 +100,27 @@ func main() {
 	successfulContracts := 0
 	verdict := ContractPass
 
-	for _, contract := range suite.Contracts {
-		res := RunContract(contract, *suite, &warningFailureReasons)
+	jobs := make(chan serialization.Contract, len(suite.Contracts))
+	results := make(chan ContractResult, 0)
+	for w := 0; w < *numWorkers; w++ {
+		go worker(jobs, results, *suite, &warningFailureReasons)
+	}
+
+	// Send contracts to workers
+	var wg sync.WaitGroup
+	go func() {
+		for _, contract := range suite.Contracts {
+			wg.Add(1)
+			jobs <- contract
+		}
+		close(jobs)
+
+		wg.Wait()
+		close(results)
+	}()
+
+	// Handle results from workers
+	for res := range results {
 		pass := res.Pass(&warningFailureReasons)
 		verdict |= pass
 
@@ -116,6 +137,7 @@ func main() {
 			postfix = " " + aurora.Faint("("+postfix+")").String()
 		}
 		fmt.Printf("[%s] %s%s\n", PassWarnFail(pass), res.Name, postfix)
+		wg.Done()
 	}
 
 	fmt.Println()
@@ -124,5 +146,17 @@ func main() {
 
 	if successfulContracts < len(suite.Contracts) {
 		os.Exit(1)
+	}
+}
+
+func worker(
+	jobs <-chan serialization.Contract,
+	results chan<- ContractResult,
+	suite serialization.Suite,
+	warningFailureReasons *[]FailureReason,
+) {
+	for contract := range jobs {
+		res := RunContract(contract, suite, warningFailureReasons)
+		results <- res
 	}
 }
