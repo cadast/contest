@@ -10,7 +10,11 @@ There is also a homebrew package for macOS which you can install by running `bre
 
 ## Usage
 
-`contest --schema openapidoc.yaml --schema openapidoc2.yaml --suite suite.yaml`
+Run a simple suite: `contest --suite suite.contest.yaml`
+
+Run a suite with additional models needed: `contest --schema schema-with-model.yaml --suite custom-suite.contest.yaml`
+
+Using a OpenAPI documents is recommended over manually specifying contracts.
 
 ### Contest YAML
 
