@@ -4,9 +4,9 @@ A simple tool for contract testing web APIs.
 
 ## Installation
 
-You can find the binaries of the latest release [here](https://github.com/cadast/contest/releases/latest).
+You can find the binaries of the latest release [here](https://github.com/lowski/contest/releases/latest).
 
-There is also a homebrew package for macOS which you can install by running `brew install cadast/contest/contest`. 
+There is also a homebrew package for macOS which you can install by running `brew install lowski/tap/contest`. 
 
 ## Usage
 
